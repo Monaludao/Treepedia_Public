@@ -3,6 +3,8 @@
 # Copyright(C) Ian Seiferling, Xiaojiang Li, Marwa Abdulhai, Senseable City Lab, MIT 
 # First version July 21 2017
 
+# the code is modified by RichardHsieh in June 2020 to adapt to python 3.7 and updated modules
+
 
 # now run the python file: createPoints.py, the input shapefile has to be in projection of WGS84, 4326
 def createPoints(inshp, outshp, mini_dist):
@@ -19,7 +21,6 @@ def createPoints(inshp, outshp, mini_dist):
         mini_dist: the minimum distance between two created point
 
     last modified by Xiaojiang Li, MIT Senseable City Lab
-    
     '''
     
     import fiona
@@ -29,7 +30,6 @@ def createPoints(inshp, outshp, mini_dist):
     from functools import partial
     import pyproj
     from fiona.crs import from_epsg
-    
     
     count = 0
     s = {'trunk_link','tertiary','motorway','motorway_link','steps', None, ' ','pedestrian','primary', 'primary_link','footway','tertiary_link', 'trunk','secondary','secondary_link','tertiary_link','bridleway','service'}
@@ -53,7 +53,7 @@ def createPoints(inshp, outshp, mini_dist):
                     continue
             except:
                 # if the street map is not osm, do nothing. You'd better to clean the street map, if you don't want to map the GVI for highways
-                key = dest.schema['properties'].keys()[0] # get the field of the input shapefile and duplicate the input feature
+                key = list(dest.schema['properties'].keys())[0] # get the field of the input shapefile and duplicate the input feature                
                 i = feat['properties'][key]
                 if i in s:
                     continue
@@ -66,10 +66,9 @@ def createPoints(inshp, outshp, mini_dist):
     }
 
     # Create pointS along the streets
-    with fiona.drivers():
-        #with fiona.open(outshp, 'w', 'ESRI Shapefile', crs=source.crs, schema) as output:
-        with fiona.open(outshp, 'w', crs = from_epsg(4326), driver = 'ESRI Shapefile', schema = schema) as output:
-            for line in fiona.open(temp_cleanedStreetmap):
+    with fiona.Env():
+        with fiona.open(outshp, 'w', crs = source.crs, driver = 'ESRI Shapefile', schema = schema) as output:
+            for line in fiona.open(temp_cleanedStreetmap,crs = from_epsg(4326)):
                 first = shape(line['geometry'])
                 
                 length = first.length
@@ -108,6 +107,7 @@ if __name__ == "__main__":
     root = 'MYPATHH//spatial-data'
     inshp = os.path.join(root,'CambridgeStreet_wgs84.shp')
     outshp = os.path.join(root,'Cambridge20m.shp')
+    
     mini_dist = 20 #the minimum distance between two generated points in meter
     createPoints(inshp, outshp, mini_dist)
 

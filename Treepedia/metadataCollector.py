@@ -1,7 +1,6 @@
-
 # This function is used to collect the metadata of the GSV panoramas based on the sample point shapefile
-
 # Copyright(C) Xiaojiang Li, Ian Seiferling, Marwa Abdulhai, Senseable City Lab, MIT 
+
 
 def GSVpanoMetadataCollector(samplesFeatureClass,num,ouputTextFolder):
     '''
@@ -16,12 +15,13 @@ def GSVpanoMetadataCollector(samplesFeatureClass,num,ouputTextFolder):
         
     '''
     
-    import urllib,urllib2
+    import urllib
     import xmltodict
-    import cStringIO
+    import io
     import ogr, osr
     import time
     import os,os.path
+    import math
     
     if not os.path.exists(ouputTextFolder):
         os.makedirs(ouputTextFolder)
@@ -42,7 +42,7 @@ def GSVpanoMetadataCollector(samplesFeatureClass,num,ouputTextFolder):
     featureNum = layer.GetFeatureCount()
     batch = featureNum/num
     
-    for b in range(batch):
+    for b in range(int(math.ceil(batch))):
         # for each batch process num GSV site
         start = b*num
         end = (b+1)*num
@@ -76,7 +76,8 @@ def GSVpanoMetadataCollector(samplesFeatureClass,num,ouputTextFolder):
                 
                 time.sleep(0.05)
                 # the output result of the meta data is a xml object
-                metaDataxml = urllib2.urlopen(urlAddress)
+#                metaDataxml = urllib2.urlopen(urlAddress)
+                metaDataxml = urllib.request.urlopen(urlAddress)
                 metaData = metaDataxml.read()    
                 
                 data = xmltodict.parse(metaData)
@@ -88,12 +89,12 @@ def GSVpanoMetadataCollector(samplesFeatureClass,num,ouputTextFolder):
                     panoInfo = data['panorama']['data_properties']
                                         
                     # get the meta data of the panorama
-                    panoDate = panoInfo.items()[4][1]
-                    panoId = panoInfo.items()[5][1]
-                    panoLat = panoInfo.items()[8][1]
-                    panoLon = panoInfo.items()[9][1]
+                    panoDate = list(panoInfo.items())[4][1]
+                    panoId = list(panoInfo.items())[5][1]
+                    panoLat = list(panoInfo.items())[8][1]
+                    panoLon = list(panoInfo.items())[9][1]
                     
-                    print 'The coordinate (%s,%s), panoId is: %s, panoDate is: %s'%(panoLon,panoLat,panoId, panoDate)
+                    print('The coordinate (%s,%s), panoId is: %s, panoDate is: %s'%(panoLon,panoLat,panoId, panoDate))
                     lineTxt = 'panoID: %s panoDate: %s longitude: %s latitude: %s\n'%(panoId, panoDate, panoLon, panoLat)
                     panoInfoText.write(lineTxt)
                     
@@ -107,6 +108,8 @@ if __name__ == "__main__":
     root = 'MYPATH/spatial-data'
     inputShp = os.path.join(root,'Cambridge20m.shp')
     outputTxt = root
+    
+    num = 1000
     
     GSVpanoMetadataCollector(inputShp,1000,outputTxt)
 

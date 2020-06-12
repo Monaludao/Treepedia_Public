@@ -79,7 +79,7 @@ def graythresh(array,level):
 
 
 
-def VegetationClassification(Img):
+def VegetationClassification(Img, panoID, heading):
     '''
     This function is used to classify the green vegetation from GSV image,
     This is based on object based and otsu automatically thresholding method
@@ -92,6 +92,7 @@ def VegetationClassification(Img):
     
     import pymeanshift as pms
     import numpy as np
+    from PIL import Image
     
     # use the meanshift segmentation algorithm to segment the original GSV image
     (segmented_image, labels_image, number_regions) = pms.segment(Img,spatial_radius=6,
@@ -172,14 +173,14 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
     from PIL import Image
     import numpy as np
     import requests
-    from StringIO import StringIO
+    import io
     
     
     # read the Google Street View API key files, you can also replace these keys by your own
     lines = open(key_file,"r")
     keylist = []
     for line in lines:
-        key = line[:-1]
+        key = line #[:-1]
         keylist.append(key)
     
     print ('The key list is:=============', keylist)
@@ -197,7 +198,7 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
     
     # the input GSV info should be in a folder
     if not os.path.isdir(GSVinfoFolder):
-        print 'You should input a folder for GSV metadata'
+        print ('You should input a folder for GSV metadata')
         return
     else:
         allTxtFiles = os.listdir(GSVinfoFolder)
@@ -244,13 +245,14 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
             
             
             # check whether the file already generated, if yes, skip. Therefore, you can run several process at same time using this code.
-            print GreenViewTxtFile
+            print (GreenViewTxtFile)
             if os.path.exists(GreenViewTxtFile):
                 continue
             
             # write the green view and pano info to txt            
             with open(GreenViewTxtFile,"w") as gvResTxt:
                 for i in range(len(panoIDLst)):
+                    # if(i == 10): return
                     panoDate = panoDateLst[i]
                     panoID = panoIDLst[i]
                     lat = panoLatLst[i]
@@ -264,10 +266,10 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
                     greenPercent = 0.0
 
                     for heading in headingArr:
-                        print "Heading is: ",heading
+                        print ("Heading is: ",heading)
                         
                         # using different keys for different process, each key can only request 25,000 imgs every 24 hours
-                        URL = "http://maps.googleapis.com/maps/api/streetview?size=400x400&pano=%s&fov=60&heading=%d&pitch=%d&sensor=false&key=AIzaSyAwLr6Oz0omObrCJ4n6lI4VbCCvmaL1Z3Y"%(panoID,heading,pitch)
+                        URL = "http://maps.googleapis.com/maps/api/streetview?size=400x400&pano=%s&fov=60&heading=%d&pitch=%d&sensor=false&key=%s"%(panoID,heading,pitch,key)
                         
                         # let the code to pause by 1s, in order to not go over data limitation of Google quota
                         time.sleep(1)
@@ -275,8 +277,8 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
                         # classify the GSV images and calcuate the GVI
                         try:
                             response = requests.get(URL)
-                            im = np.array(Image.open(StringIO(response.content)))
-                            percent = VegetationClassification(im)
+                            im = np.array(Image.open(io.BytesIO(response.content)))
+                            percent = VegetationClassification(im, panoID, heading)
                             greenPercent = greenPercent + percent
 
                         # if the GSV images are not download successfully or failed to run, then return a null value
@@ -286,7 +288,7 @@ def GreenViewComputing_ogr_6Horizon(GSVinfoFolder, outTXTRoot, greenmonth, key_f
 
                     # calculate the green view index by averaging six percents from six images
                     greenViewVal = greenPercent/numGSVImg
-                    print 'The greenview: %s, pano: %s, (%s, %s)'%(greenViewVal, panoID, lat, lon)
+                    print ('The greenview: %s, pano: %s, (%s, %s)'%(greenViewVal, panoID, lat, lon))
 
                     # write the result and the pano info to the result txt file
                     lineTxt = 'panoID: %s panoDate: %s longitude: %s latitude: %s, greenview: %s\n'%(panoID, panoDate, lon, lat, greenViewVal)
@@ -304,7 +306,7 @@ if __name__ == "__main__":
     outputTextPath = r'MYPATH//spatial-data/greenViewRes'
     greenmonth = ['01','02','03','04','05','06','07','08','09','10','11','12']
     key_file = 'MYPATH/Treepedia/Treepedia/keys.txt'
-    
+
     GreenViewComputing_ogr_6Horizon(GSVinfoRoot,outputTextPath, greenmonth, key_file)
 
 
